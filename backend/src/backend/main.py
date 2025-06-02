@@ -1,15 +1,20 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.backend.utils.gcs_url_gen import generate_upload_url
+from src.backend.models.general import UploadNotification
+import os
+
+
+BUCKET_NAME = os.getenv("GCS_BUCKET_NAME")
 
 origins = [
-        "http://localhost:3000",
+    "http://localhost:3000",
 ]
 
 app = FastAPI(
     title="PDF-Chat",
     version="0.1.0",
-    description="chat with your pdf's to learn efficiently"
+    description="chat with your pdf's to learn efficiently",
 )
 
 app.add_middleware(
@@ -19,6 +24,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
 @app.get("/")
 async def read_root():
     """
@@ -40,6 +47,25 @@ async def health_check():
     }
 
 
-@app.get("/generate-upload-url")
+@app.get("/pdf/generate-upload-url")
 async def get_upload_url(filename: str):
     return generate_upload_url(filename)
+
+
+@app.post("/pdf/notify-uploaded")
+async def notify_successful_upload(payload: UploadNotification):
+    file_path = f"https://storage.googleapis.com/{BUCKET_NAME}/{payload.filename}"
+
+    print(
+        {
+            "message": "Upload notification received",
+            "filename": payload.filename,
+            "file_path": file_path,
+        }
+    )
+
+    return {
+        "message": "Upload notification received",
+        "filename": payload.filename,
+        "file_path": file_path,
+    }

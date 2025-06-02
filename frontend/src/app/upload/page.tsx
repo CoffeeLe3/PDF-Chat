@@ -24,11 +24,20 @@ const UploadPdf = () => {
       const res = await axios.get(`/api/get-upload-url?filename=${file.name}`);
       const { upload_url } = res.data;
 
-      await axios.put(upload_url, file, {
+      const uploadResult = await axios.put(upload_url, file, {
         headers: {
           "Content-Type": "application/pdf",
         },
       });
+
+      const data = await fetch(`api/notify-uploaded`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ filename: file.name }),
+      })
+
     } catch (err) {
       console.error(err);
       setMessage("Something went wrong.");
@@ -37,7 +46,9 @@ const UploadPdf = () => {
 
   return (
     <div className="max-w-md mx-auto mt-10 p-4 bg-gray-800 rounded shadow">
-      <h2 className="text-center text-green-200 text-xl font-semibold mb-4">Upload PDF</h2>
+      <h2 className="text-center text-green-200 text-xl font-semibold mb-4">
+        Upload PDF
+      </h2>
 
       <input
         type="file"
@@ -53,7 +64,9 @@ const UploadPdf = () => {
         Upload
       </button>
 
-      {message && <p className="mt-4 text-center text-sm text-yellow-200">{message}</p>}
+      {message && (
+        <p className="mt-4 text-center text-sm text-yellow-200">{message}</p>
+      )}
     </div>
   );
 };
