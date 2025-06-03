@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.backend.utils.gcs_url_gen import generate_upload_url
+from src.backend.utils.publish import publish_message
 from src.backend.models.general import UploadNotification
 import os
 
@@ -54,18 +55,19 @@ async def get_upload_url(filename: str):
 
 @app.post("/pdf/notify-uploaded")
 async def notify_successful_upload(payload: UploadNotification):
-    file_path = f"https://storage.googleapis.com/{BUCKET_NAME}/{payload.filename}"
-
-    print(
-        {
-            "message": "Upload notification received",
+    if payload:
+        file_path = f"https://storage.googleapis.com/{BUCKET_NAME}/{payload.filename}"
+        message = {
             "filename": payload.filename,
             "file_path": file_path,
         }
-    )
+        result = publish_message(message)
+        return result
+    else:
+        return { "message": "failed to get status on upload" }
 
-    return {
-        "message": "Upload notification received",
-        "filename": payload.filename,
-        "file_path": file_path,
-    }
+
+# @app.get("/test-publish")
+# async def test_publish():
+#     result = publish_message()
+#     return result
