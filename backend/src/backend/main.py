@@ -3,7 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.backend.utils.gcs_url_gen import generate_upload_url
 from src.backend.utils.publish import publish_message
 from src.backend.models.general import UploadNotification
+from src.backend.db import pdf_collection
 import os
+import uuid
 
 
 BUCKET_NAME = os.getenv("GCS_BUCKET_NAME")
@@ -56,15 +58,30 @@ async def get_upload_url(filename: str):
 @app.post("/pdf/notify-uploaded")
 async def notify_successful_upload(payload: UploadNotification):
     if payload:
+        status = "uploaded"
         file_path = f"https://storage.googleapis.com/{BUCKET_NAME}/{payload.filename}"
+        pdf_id = str(uuid.uuid4())
+
         message = {
+            "pdf_id": pdf_id,
             "filename": payload.filename,
             "file_path": file_path,
+            "status": status,
         }
-        result = publish_message(message)
-        return result
+
+        insert_result = pdf_collection.insert_one(message.copy())
+
+        if insert_result.inserted_id:
+            result = publish_message(message)
+            return {
+                "message": "Upload notification processed successfully",
+                "pdf_id": pdf_id,
+                "pubsub": result,
+            }
+        else:
+            return {"error": "Failed to save document in MongoDB"}
     else:
-        return { "message": "failed to get status on upload" }
+        return {"message": "failed to get status on upload"}
 
 
 # @app.get("/test-publish")
